@@ -7,7 +7,7 @@ local Player = Players.LocalPlayer
 local muscleEvent = Player:WaitForChild("muscleEvent")
 local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/fjejehrieii/fjejehrieii/refs/heads/main/fjejehrieii.lua", true))()
 local window = library:AddWindow("Treee | Private | Killing", {
-	main_color = Color3.fromRGB(96, 96, 96),
+	main_color = Color3.fromRGB(40, 1, 55),
 	min_size = Vector2.new(438, 606),
 })
 local MainTab = window:AddTab("Main")
