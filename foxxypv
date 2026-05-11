@@ -39,7 +39,6 @@ end
 deleteAds()
 local MainTab = window:AddTab("Main")
 MainTab:Show()
-MainTab:AddLabel("Protection and Visuals:").TextSize = 20
 MainTab:AddButton("Execute Infinite Yield", function()
     loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
 end)
