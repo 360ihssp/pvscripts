@@ -1,43 +1,50 @@
 local Players = game:GetService("Players")
-local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VirtualUser = game:GetService("VirtualUser")
 local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
 local Player = Players.LocalPlayer
 local muscleEvent = Player:WaitForChild("muscleEvent")
-local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/fjejehrieii/fjejehrieii/refs/heads/main/fjejehrieii.lua", true))()
-local window = library:AddWindow("Treee | Private | Killing", {
-	main_color = Color3.fromRGB(40, 1, 55),
-	min_size = Vector2.new(438, 606),
+
+local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/memejames/elerium-v2-ui-library//main/Library", true))()
+local window = library:AddWindow("Treee | Private | Killer", {
+	main_color = Color3.fromRGB(0, 0, 0),
+	min_size = Vector2.new(500, 700),
 })
-local MainTab = window:AddTab("Main")
-MainTab:Show()
-local KillingTab = window:AddTab("Killing")
-local GodmodeTab = window:AddTab("GodMode")
-local SpecsTab = window:AddTab("Specs")
-local function removePortals()
+
+player.Idled:Connect(function()
+    virtualUser:CaptureController()
+    virtualUser:ClickButton2(Vector2.new())
+end)
+
+local function deleteAds()
     for _, portal in pairs(game:GetDescendants()) do
         if portal.Name == "RobloxForwardPortals" then
             portal:Destroy()
         end
     end
-    if _G.AdRemovalConnection then
-        _G.AdRemovalConnection:Disconnect()
+    if _G.ads then
+        _G.ads:Disconnect()
     end
-    _G.AdRemovalConnection = game.DescendantAdded:Connect(function(descendant)
+    _G.ads = game.DescendantAdded:Connect(function(descendant)
         if descendant.Name == "RobloxForwardPortals" then
             descendant:Destroy()
         end
     end)
 end
-removePortals()
-MainTab:AddButton("Anti Lag", function()
+deleteAds()
+
+local mainTab = window:AddTab("Main")
+
+mainTab:AddButton("Anti Lag", function()
     loadstring(game:HttpGet("https://raw.githubusercontent.com/juywvm/-Roblox-Projects-/main/____Anti_Afk_Remastered_______"))()
 end)
+
 local parts = {}
 local partSize = 2048
 local totalDistance = 50000
 local startPosition = Vector3.new(-2, -9.5, -2)
+
 local function createAllParts()
     local numberOfParts = math.ceil(totalDistance / partSize)
     for x = 0, numberOfParts - 1 do
@@ -61,14 +68,16 @@ local function createAllParts()
     end
 end
 task.spawn(createAllParts)
-local walkonwaterSwitch = MainTab:AddSwitch("Walk On Water", function(bool)
+
+local walkOnWaterSwitch = mainTab:AddSwitch("Walk On Water", function(bool)
     for _, part in ipairs(parts) do
         if part and part.Parent then
             part.CanCollide = bool
         end
     end
 end)
-walkonwaterSwitch:Set(true)
+walkOnWaterSwitch:Set(true)
+
 local running = false
 local running = false
 local running = false
@@ -76,7 +85,8 @@ local running = false
 local thread
 local running = false
 local thread
-local antiKnockbackSwitch = MainTab:AddSwitch("Anti Fling", function(bool)
+
+local antiKnockbackSwitch = mainTab:AddSwitch("Anti Fling", function(bool)
     if bool then
         local playerName = game.Players.LocalPlayer.Name
         local character = game.Workspace:FindFirstChild(playerName)
@@ -105,42 +115,100 @@ local antiKnockbackSwitch = MainTab:AddSwitch("Anti Fling", function(bool)
     end
 end)
 antiKnockbackSwitch:Set(true)
-local switch = MainTab:AddSwitch("Lock Position", function(Value)
-    if Value then
-        local currentPos = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame
-        getgenv().posLock = game:GetService("RunService").Heartbeat:Connect(function()
-            if game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = currentPos
-            end
-        end)
+
+local posLocked = false
+local lockedPosition = nil
+
+local function lockPosition()
+    if not posLocked or not lockedPosition then
+        return
+    end
+    local currentCharacter = player.Character
+    if not currentCharacter then
+        return
+    end
+    local rootPart = currentCharacter:FindFirstChild("HumanoidRootPart")
+    if not rootPart then
+        return
+    end
+    local existingPosition = rootPart:FindFirstChild("PositionLocker")
+    if existingPosition then
+        existingPosition.Position = lockedPosition
     else
-        if getgenv().posLock then
-            getgenv().posLock:Disconnect()
-            getgenv().posLock = nil
+        local bodyPosition = Instance.new("BodyPosition")
+        bodyPosition.Name = "PositionLocker"
+        bodyPosition.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+        bodyPosition.Position = lockedPosition
+        bodyPosition.P = 100000
+        bodyPosition.Parent = rootPart
+    end
+end
+
+local function unlockPosition()
+    local currentCharacter = player.Character
+    if currentCharacter then
+        local rootPart = currentCharacter:FindFirstChild("HumanoidRootPart")
+        if rootPart then
+            local existingPosition = rootPart:FindFirstChild("PositionLocker")
+            if existingPosition then
+                existingPosition:Destroy()
+            end
         end
     end
+    lockedPosition = nil
+end
+
+local lockPositionSwitch = mainTab:AddSwitch("Lock Position", function(bool)
+    posLocked = bool
+    if bool then
+        local currentRootPart = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+        if currentRootPart then
+            lockedPosition = currentRootPart.Position
+        end
+        lockPosition()
+    else
+        unlockPosition()
+    end
 end)
-MainTab:AddButton("Rejoin", function()
-    local TeleportService = game:GetService("TeleportService")
-    local Players = game:GetService("Players")
-    local LocalPlayer = Players.LocalPlayer
-    TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
+
+player.CharacterAdded:Connect(function(newCharacter)
+    local rootPart = newCharacter:WaitForChild("HumanoidRootPart", 5)
+    if posLocked and rootPart then
+        lockedPosition = rootPart.Position
+        lockPosition()
+    end
 end)
-local showpetsswitch = MainTab:AddSwitch("Show Pets", function(bool)
+
+task.spawn(function()
+    while true do
+        if posLocked then
+            lockPosition()
+        end
+        task.wait(0.1)
+    end
+end)
+
+mainTab:AddButton("Rejoin", function()
+    game:GetService("TeleportService"):Teleport(game.PlaceId, lp)
+end)
+
+local showPetsSwitch = mainTab:AddSwitch("Show Pets", function(bool)
     local player = game:GetService("Players").LocalPlayer
     if player:FindFirstChild("hidePets") then
         player.hidePets.Value = bool
     end
 end)
-showpetsswitch:Set(false)
-local showotherpetsswitch = MainTab:AddSwitch("Show Other Pets", function(bool)
+showPetsSwitch:Set(false)
+
+local showOthersPetsSwitch = mainTab:AddSwitch("Show Others Pets", function(bool)
     local player = game:GetService("Players").LocalPlayer
     if player:FindFirstChild("showOtherPetsOn") then
         player.showOtherPetsOn.Value = bool
     end
 end)
-showotherpetsswitch:Set(false)
-local frameToggle = MainTab:AddSwitch("Hide Stat Frames", function(bool)
+showOthersPetsSwitch:Set(false)
+
+local hideStatFrames = mainTab:AddSwitch("Hide Stat Frames", function(bool)
     local rSto = game:GetService("ReplicatedStorage")
     for _, obj in pairs(rSto:GetChildren()) do
         if obj.Name:match("Frame$") then
@@ -148,26 +216,33 @@ local frameToggle = MainTab:AddSwitch("Hide Stat Frames", function(bool)
         end
     end
 end)
-frameToggle:Set(true)
+hideStatFrames:Set(true)
+
+local killingTab = window:AddTab("Killing")
+killingTab:Show()
+
 local function checkCharacter()
-    if not game.Players.LocalPlayer.Character then
-        repeat task.wait() until game.Players.LocalPlayer.Character
+    if not Player.Character then
+        repeat task.wait() until Player.Character
     end
-    return game.Players.LocalPlayer.Character
+    return Player.Character
 end
+
 local function gettool()
-    for _, v in pairs(game.Players.LocalPlayer.Backpack:GetChildren()) do
-        if v.Name == "Punch" and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid") then
-            game.Players.LocalPlayer.Character.Humanoid:EquipTool(v)
+    for _, v in pairs(Player.Backpack:GetChildren()) do
+        if v.Name == "Punch" and Player.Character:FindFirstChild("Humanoid") then
+            Player.Character.Humanoid:EquipTool(v)
         end
     end
-    game.Players.LocalPlayer.muscleEvent:FireServer("punch", "leftHand")
-    game.Players.LocalPlayer.muscleEvent:FireServer("punch", "rightHand")
+    muscleEvent:FireServer("punch", "leftHand")
+    muscleEvent:FireServer("punch", "rightHand")
 end
+
 local function isPlayerAlive(player)
     return player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") and
     player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0
 end
+
 local function killPlayer(target)
     if not isPlayerAlive(target) then return end
     local character = checkCharacter()
@@ -179,38 +254,62 @@ local function killPlayer(target)
         end)
     end
 end
-local dropdown = KillingTab:AddDropdown("Select Pet", function(text)
-    local petsFolder = game.Players.LocalPlayer.petsFolder
+
+_G.whitelistedPlayers = _G.whitelistedPlayers or {}
+_G.blacklistedPlayers = _G.blacklistedPlayers or {}
+
+local function isWhitelisted(player)
+    for _, name in ipairs(_G.whitelistedPlayers) do
+        if name:lower() == player.Name:lower() then return true end
+    end
+    return false
+end
+
+local function isBlacklisted(player)
+    for _, name in ipairs(_G.blacklistedPlayers) do
+        if name:lower() == player.Name:lower() then return true end
+    end
+    return false
+end
+
+local function getPlayerDisplayText(player)
+    return player.DisplayName .. " | " .. player.Name
+end
+
+local dropdown = killingTab:AddDropdown("Select Pet", function(text)
+    local petsFolder = Player.petsFolder
     for _, folder in pairs(petsFolder:GetChildren()) do
         if folder:IsA("Folder") then
             for _, pet in pairs(folder:GetChildren()) do
-                game:GetService("ReplicatedStorage").rEvents.equipPetEvent:FireServer("unequipPet", pet)
+                pcall(function()
+                    ReplicatedStorage.rEvents.equipPetEvent:FireServer("unequipPet", pet)
+                end)
             end
         end
     end
     task.wait(0.2)
-    local petName = text
     local petsToEquip = {}
-    for _, pet in pairs(game.Players.LocalPlayer.petsFolder.Unique:GetChildren()) do
-        if pet.Name == petName then
-            table.insert(petsToEquip, pet)
-        end
+    for _, pet in pairs(Player.petsFolder.Unique:GetChildren()) do
+        if pet.Name == text then table.insert(petsToEquip, pet) end
     end
     for i = 1, math.min(8, #petsToEquip) do
-        game:GetService("ReplicatedStorage").rEvents.equipPetEvent:FireServer("equipPet", petsToEquip[i])
+        pcall(function()
+            ReplicatedStorage.rEvents.equipPetEvent:FireServer("equipPet", petsToEquip[i])
+        end)
         task.wait(0.1)
     end
 end)
 dropdown:Add("Wild Wizard")
 dropdown:Add("Mighty Monster")
-local switch = KillingTab:AddSwitch("Remove Attack Animations", function(bool)
+
+local switch = killingTab:AddSwitch("Remove Animations", function(bool)
     if bool then
         local blockedAnimations = {
             ["rbxassetid://3638729053"] = true,
             ["rbxassetid://3638767427"] = true,
         }
         local function setupAnimationBlocking()
-            local char = game.Players.LocalPlayer.Character
+            local char = Player.Character
             if not char or not char:FindFirstChild("Humanoid") then return end
             local humanoid = char:FindFirstChild("Humanoid")
             for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
@@ -239,7 +338,7 @@ local switch = KillingTab:AddSwitch("Remove Attack Animations", function(bool)
                     _G.ToolConnections = _G.ToolConnections or {}
                     _G.ToolConnections[tool] = tool.Activated:Connect(function()
                         task.wait(0.05)
-                        local char = game.Players.LocalPlayer.Character
+                        local char = Player.Character
                         if char and char:FindFirstChild("Humanoid") then
                             for _, track in pairs(char.Humanoid:GetPlayingAnimationTracks()) do
                                 if track.Animation then
@@ -256,35 +355,25 @@ local switch = KillingTab:AddSwitch("Remove Attack Animations", function(bool)
             end
         end
         local function overrideToolActivation()
-            for _, tool in pairs(game.Players.LocalPlayer.Backpack:GetChildren()) do
-                processTool(tool)
-            end
-            local char = game.Players.LocalPlayer.Character
+            for _, tool in pairs(Player.Backpack:GetChildren()) do processTool(tool) end
+            local char = Player.Character
             if char then
                 for _, tool in pairs(char:GetChildren()) do
-                    if tool:IsA("Tool") then
-                        processTool(tool)
-                    end
+                    if tool:IsA("Tool") then processTool(tool) end
                 end
             end
-            _G.BackpackAddedConnection = game.Players.LocalPlayer.Backpack.ChildAdded:Connect(function(child)
-                if child:IsA("Tool") then
-                    task.wait(0.1)
-                    processTool(child)
-                end
+            _G.BackpackAddedConnection = Player.Backpack.ChildAdded:Connect(function(child)
+                if child:IsA("Tool") then task.wait(0.1) processTool(child) end
             end)
             if char then
                 _G.CharacterToolAddedConnection = char.ChildAdded:Connect(function(child)
-                    if child:IsA("Tool") then
-                        task.wait(0.1)
-                        processTool(child)
-                    end
+                    if child:IsA("Tool") then task.wait(0.1) processTool(child) end
                 end)
             end
         end
-        _G.AnimMonitorConnection = game:GetService("RunService").Heartbeat:Connect(function()
+        _G.AnimMonitorConnection = RunService.Heartbeat:Connect(function()
             if tick() % 0.5 < 0.01 then
-                local char = game.Players.LocalPlayer.Character
+                local char = Player.Character
                 if char and char:FindFirstChild("Humanoid") then
                     for _, track in pairs(char.Humanoid:GetPlayingAnimationTracks()) do
                         if track.Animation then
@@ -298,62 +387,40 @@ local switch = KillingTab:AddSwitch("Remove Attack Animations", function(bool)
                 end
             end
         end)
-        _G.CharacterAddedConnection = game.Players.LocalPlayer.CharacterAdded:Connect(function(newChar)
+        _G.CharacterAddedConnection = Player.CharacterAdded:Connect(function(newChar)
             task.wait(1)
             setupAnimationBlocking()
             overrideToolActivation()
-            if _G.CharacterToolAddedConnection then
-                _G.CharacterToolAddedConnection:Disconnect()
-            end
+            if _G.CharacterToolAddedConnection then _G.CharacterToolAddedConnection:Disconnect() end
             _G.CharacterToolAddedConnection = newChar.ChildAdded:Connect(function(child)
-                if child:IsA("Tool") then
-                    task.wait(0.1)
-                    processTool(child)
-                end
+                if child:IsA("Tool") then task.wait(0.1) processTool(child) end
             end)
         end)
         setupAnimationBlocking()
         overrideToolActivation()
     else
-        if _G.AnimBlockConnection then
-            _G.AnimBlockConnection:Disconnect()
-            _G.AnimBlockConnection = nil
-        end
-        if _G.AnimMonitorConnection then
-            _G.AnimMonitorConnection:Disconnect()
-            _G.AnimMonitorConnection = nil
-        end
-        if _G.CharacterAddedConnection then
-            _G.CharacterAddedConnection:Disconnect()
-            _G.CharacterAddedConnection = nil
-        end
-        if _G.BackpackAddedConnection then
-            _G.BackpackAddedConnection:Disconnect()
-            _G.BackpackAddedConnection = nil
-        end
-        if _G.CharacterToolAddedConnection then
-            _G.CharacterToolAddedConnection:Disconnect()
-            _G.CharacterToolAddedConnection = nil
-        end
+        if _G.AnimBlockConnection then _G.AnimBlockConnection:Disconnect() _G.AnimBlockConnection = nil end
+        if _G.AnimMonitorConnection then _G.AnimMonitorConnection:Disconnect() _G.AnimMonitorConnection = nil end
+        if _G.CharacterAddedConnection then _G.CharacterAddedConnection:Disconnect() _G.CharacterAddedConnection = nil end
+        if _G.BackpackAddedConnection then _G.BackpackAddedConnection:Disconnect() _G.BackpackAddedConnection = nil end
+        if _G.CharacterToolAddedConnection then _G.CharacterToolAddedConnection:Disconnect() _G.CharacterToolAddedConnection = nil end
         if _G.ToolConnections then
             for tool, connection in pairs(_G.ToolConnections) do
-                if connection then
-                    connection:Disconnect()
-                end
-                if tool and tool:GetAttribute("ActivatedOverride") then
-                    tool:SetAttribute("ActivatedOverride", nil)
-                end
+                if connection then connection:Disconnect() end
+                if tool and tool:GetAttribute("ActivatedOverride") then tool:SetAttribute("ActivatedOverride", nil) end
             end
             _G.ToolConnections = nil
         end
     end
 end)
 switch:Set(false)
-KillingTab:AddSwitch("Block Eating Eggs", function(state)
+
+killingTab:AddSwitch("Block Eating Eggs", function(state)
 if state then
     local Players = game:GetService("Players")
 local player  = Players.LocalPlayer
 local BLOCKED_TOOL_NAME = "Protein Egg"
+
 local function neutralizeTool(tool)
     for _, desc in ipairs(tool:GetDescendants()) do
         if desc:IsA("Script") or desc:IsA("LocalScript") then
@@ -370,11 +437,13 @@ local function neutralizeTool(tool)
         end
     end
 end
+
 local function onToolEquipped(tool)
     if tool.Name == BLOCKED_TOOL_NAME then
         neutralizeTool(tool)
     end
 end
+
 local function monitorContainer(container)
     for _, tool in ipairs(container:GetChildren()) do
         if tool:IsA("Tool") and tool.Name == BLOCKED_TOOL_NAME then
@@ -390,256 +459,55 @@ local function monitorContainer(container)
         end
     end)
 end
+
 player.CharacterAdded:Connect(function(char)
     monitorContainer(player.Backpack)
     monitorContainer(char)
 end)
+
 if player.Character then
     monitorContainer(player.Backpack)
     monitorContainer(player.Character)
 end
 end
 end)
-local LocalPlayer = game.Players.LocalPlayer
-local sizeToSet = 0/0
-local megaSwitchEnabled = false
-local posLockConnection
-local safePlatform
-local megaSwitch = KillingTab:AddSwitch("Egg + Nan Combo Spawn", function(state)
-    megaSwitchEnabled = state
-    if state then
-        local posX, posY, posZ = 100000, -200, 100000
-        local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-        local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-        safePlatform = Instance.new("Part")
-        safePlatform.Size = Vector3.new(50, 1, 50)
-        safePlatform.Position = Vector3.new(posX, posY - 3, posZ)
-        safePlatform.Anchored = true
-        safePlatform.CanCollide = true
-        safePlatform.Color = Color3.fromRGB(255, 0, 0)
-        safePlatform.Name = "SafePlatform"
-        safePlatform.Parent = workspace
-        task.wait(0.2)
-        humanoidRootPart.CFrame = CFrame.new(2, 8, 115)
-        local currentPos = humanoidRootPart.CFrame
-        posLockConnection = game:GetService("RunService").Heartbeat:Connect(function()
-            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                LocalPlayer.Character.HumanoidRootPart.CFrame = currentPos
-            end
-        end)
-        task.spawn(function()
-            while megaSwitchEnabled do
-                pcall(function()
-                    game:GetService("ReplicatedStorage").rEvents.changeSpeedSizeRemote:InvokeServer("changeSize", sizeToSet)
-                end)
-                local punch = LocalPlayer.Backpack:FindFirstChild("Punch")
-                if punch then
-                    punch.Parent = LocalPlayer.Character
-                end
-                local egg = LocalPlayer.Backpack:FindFirstChild("Protein Egg")
-                if egg then
-                    egg.Parent = LocalPlayer.Character
-                end
-                local punchTool = LocalPlayer.Backpack:FindFirstChild("Punch") or LocalPlayer.Character:FindFirstChild("Punch")
-                if punchTool then
-                    if punchTool.Parent ~= LocalPlayer.Character then
-                        punchTool.Parent = LocalPlayer.Character
-                    end
-                    LocalPlayer.muscleEvent:FireServer("punch", "rightHand")
-                    LocalPlayer.muscleEvent:FireServer("punch", "leftHand")
-                end
-                task.wait(0.01)
-            end
-        end)
-    else
-        if posLockConnection then
-            posLockConnection:Disconnect()
-            posLockConnection = nil
-        end
-        if safePlatform then
-            safePlatform:Destroy()
-            safePlatform = nil
+
+local comboActive = false
+local eggLoop, characterAddedConn
+
+local function ensureEggEquipped()
+    if not comboActive or not Player.Character then return end
+    local eggsInHand = 0
+    for _, item in ipairs(Player.Character:GetChildren()) do
+        if item.Name == "Protein Egg" then
+            eggsInHand += 1
+            if eggsInHand > 1 then item.Parent = Player.Backpack end
         end
     end
-end)
-local LocalPlayer = game.Players.LocalPlayer
-local sizeToSet = 0/0
-local megaSwitchEnabled = false
-local posLockConnection
-local safePlatform
-local megaSwitch = KillingTab:AddSwitch("Egg + Nan Combo Anti Slam", function(state)
-    megaSwitchEnabled = state
-    if state then
-        local posX, posY, posZ = 100000, -200, 100000
-        local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-        local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-        safePlatform = Instance.new("Part")
-        safePlatform.Size = Vector3.new(50, 1, 50)
-        safePlatform.Position = Vector3.new(posX, posY - 3, posZ)
-        safePlatform.Anchored = true
-        safePlatform.CanCollide = true
-        safePlatform.Color = Color3.fromRGB(255, 0, 0)
-        safePlatform.Name = "SafePlatform"
-        safePlatform.Parent = workspace
-        task.wait(0.2)
-        humanoidRootPart.CFrame = CFrame.new(posX, posY, posZ)
-        local currentPos = humanoidRootPart.CFrame
-        posLockConnection = game:GetService("RunService").Heartbeat:Connect(function()
-            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                LocalPlayer.Character.HumanoidRootPart.CFrame = currentPos
-            end
-        end)
-        task.spawn(function()
-            while megaSwitchEnabled do
-                pcall(function()
-                    game:GetService("ReplicatedStorage").rEvents.changeSpeedSizeRemote:InvokeServer("changeSize", sizeToSet)
-                end)
-                local punch = LocalPlayer.Backpack:FindFirstChild("Punch")
-                if punch then
-                    punch.Parent = LocalPlayer.Character
-                end
-                local egg = LocalPlayer.Backpack:FindFirstChild("Protein Egg")
-                if egg then
-                    egg.Parent = LocalPlayer.Character
-                end
-                local punchTool = LocalPlayer.Backpack:FindFirstChild("Punch") or LocalPlayer.Character:FindFirstChild("Punch")
-                if punchTool then
-                    if punchTool.Parent ~= LocalPlayer.Character then
-                        punchTool.Parent = LocalPlayer.Character
-                    end
-                    LocalPlayer.muscleEvent:FireServer("punch", "rightHand")
-                    LocalPlayer.muscleEvent:FireServer("punch", "leftHand")
-                end
-                task.wait(0.01)
-            end
-        end)
-    else
-        if posLockConnection then
-            posLockConnection:Disconnect()
-            posLockConnection = nil
-        end
-        if safePlatform then
-            safePlatform:Destroy()
-            safePlatform = nil
-        end
+    if eggsInHand == 0 then
+        local egg = Player.Backpack:FindFirstChild("Protein Egg")
+        if egg then egg.Parent = Player.Character end
     end
-end)
-KillingTab:AddSwitch("Fast Punch", function(state)
-    _G.autoPunchActive = state
-    if state then
-        task.spawn(function()
-            while _G.autoPunchActive do
-                local punch = LocalPlayer.Backpack:FindFirstChild("Punch")
-                if punch then
-                    punch.Parent = LocalPlayer.Character
-                    if punch:FindFirstChild("attackTime") then
-                        punch.attackTime.Value = 0
-                    end
-                end
-                task.wait()
-            end
-        end)
-        task.spawn(function()
-            while _G.autoPunchActive do
-                local punch = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Punch")
-                if punch then
-                    punch:Activate()
-                end
-                task.wait()
-            end
-        end)
-    else
-        local punch = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Punch")
-        if punch then
-            punch.Parent = LocalPlayer.Backpack
-        end
-    end
-end)
-KillingTab:AddSwitch("Auto Punch With Animation", function(state)
-    _G.fastHitActive = state
-    if state then
-        task.spawn(function()
-            while _G.fastHitActive do
-                local punch = LocalPlayer.Backpack:FindFirstChild("Punch")
-                if punch then
-                    punch.Parent = LocalPlayer.Character
-                    if punch:FindFirstChild("attackTime") then
-                        punch.attackTime.Value = 0
-                    end
-                end
-                task.wait(0.1)
-            end
-        end)
-        task.spawn(function()
-            while _G.fastHitActive do
-                local punch = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Punch")
-                if punch then
-                    punch:Activate()
-                end
-                task.wait(0.1)
-            end
-        end)
-    else
-        local punch = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Punch")
-        if punch then
-            punch.Parent = LocalPlayer.Backpack
-        end
-    end
-end)
-local autoPunchNoAnim = false
-KillingTab:AddSwitch("Auto Punch Without Animation", function(state)
-    autoPunchNoAnim = state
-    if state then
-        task.spawn(function()
-            while autoPunchNoAnim do
-                local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-                repeat task.wait() until LocalPlayer:FindFirstChild("Backpack")
-                local punch = char:FindFirstChild("Punch") or LocalPlayer.Backpack:FindFirstChild("Punch")
-                if not punch then
-                    for _, tool in ipairs(LocalPlayer.Backpack:GetChildren()) do
-                        if tool.Name == "Punch" then
-                            tool.Parent = char
-                        end
-                    end
-                    task.wait(0.05)
-                    continue
-                end
-                if punch.Parent ~= char then
-                    punch.Parent = char
-                end
-                pcall(function()
-                    LocalPlayer.muscleEvent:FireServer("punch", "rightHand")
-                    LocalPlayer.muscleEvent:FireServer("punch", "leftHand")
-                end)
-                task.wait(0.03)
-            end
-        end)
-    else
-        autoPunchNoAnim = false
-    end
-end)
-_G.whitelistedPlayers = _G.whitelistedPlayers or {}
-_G.blacklistedPlayers = _G.blacklistedPlayers or {}
-local function isWhitelisted(player)
-    for _, name in ipairs(_G.whitelistedPlayers) do
-        if name:lower() == player.Name:lower() then
-            return true
-        end
-    end
-    return false
 end
-local function isBlacklisted(player)
-    for _, name in ipairs(_G.blacklistedPlayers) do
-        if name:lower() == player.Name:lower() then
-            return true
-        end
+
+local comboSwitch = killingTab:AddSwitch("Egg + Nan Combo)", function(bool)
+    comboActive = bool
+    if bool then
+        ReplicatedStorage.rEvents.changeSpeedSizeRemote:InvokeServer("changeSize", 0/0)
+        eggLoop = task.spawn(function()
+            while comboActive do ensureEggEquipped() task.wait(0.2) end
+        end)
+        characterAddedConn = Player.CharacterAdded:Connect(function(newChar)
+            task.wait(0.5) ensureEggEquipped()
+        end)
+        ensureEggEquipped()
+    else
+        if eggLoop then task.cancel(eggLoop) end
+        if characterAddedConn then characterAddedConn:Disconnect() end
     end
-    return false
-end
-local function getPlayerDisplayText(player)
-    return player.DisplayName .. " | " .. player.Name
-end
-local whitelistDropdown = KillingTab:AddDropdown("Add To Whitelist", function(selectedText)
+end)
+
+local whitelistDropdown = killingTab:AddDropdown("Add To Whitelist", function(selectedText)
     local playerName = selectedText:match("| (.+)$")
     if playerName then
         playerName = playerName:gsub("^%s*(.-)%s*$", "%1")
@@ -649,65 +517,53 @@ local whitelistDropdown = KillingTab:AddDropdown("Add To Whitelist", function(se
         table.insert(_G.whitelistedPlayers, playerName)
     end
 end)
-local switch = KillingTab:AddSwitch("Kill Everyone", function(bool)
+
+local killAllSwitch = killingTab:AddSwitch("Kill Everyone", function(bool)
     _G.killAll = bool
     if bool then
         if not _G.killAllConnection then
-            _G.killAllConnection = game:GetService("RunService").Heartbeat:Connect(function()
+            _G.killAllConnection = RunService.Heartbeat:Connect(function()
                 if _G.killAll then
-                    for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
-                        if player ~= game.Players.LocalPlayer and not isWhitelisted(player) then
-                            killPlayer(player)
+                    for _, plr in ipairs(Players:GetPlayers()) do
+                        if plr ~= Player and not isWhitelisted(plr) then
+                            killPlayer(plr)
                         end
                     end
                 end
             end)
         end
     else
-        if _G.killAllConnection then
-            _G.killAllConnection:Disconnect()
-            _G.killAllConnection = nil
-        end
+        if _G.killAllConnection then _G.killAllConnection:Disconnect() _G.killAllConnection = nil end
     end
 end)
-switch:Set(false)
-local switch = KillingTab:AddSwitch("Whitelist Friends", function(bool)
+killAllSwitch:Set(false)
+
+local whitelistFriendsSwitch = killingTab:AddSwitch("Whitelist Friends", function(bool)
     _G.whitelistFriends = bool
     if bool then
-        for _, player in pairs(game.Players:GetPlayers()) do
-            if player ~= game.Players.LocalPlayer and player:IsFriendsWith(game.Players.LocalPlayer.UserId) then
-                local playerName = player.Name
+        for _, plr in pairs(Players:GetPlayers()) do
+            if plr ~= Player and plr:IsFriendsWith(Player.UserId) then
                 local alreadyWhitelisted = false
                 for _, name in ipairs(_G.whitelistedPlayers) do
-                    if name:lower() == playerName:lower() then
-                        alreadyWhitelisted = true
-                        break
-                    end
+                    if name:lower() == plr.Name:lower() then alreadyWhitelisted = true break end
                 end
-                if not alreadyWhitelisted then
-                    table.insert(_G.whitelistedPlayers, playerName)
-                end
+                if not alreadyWhitelisted then table.insert(_G.whitelistedPlayers, plr.Name) end
             end
         end
-        game.Players.PlayerAdded:Connect(function(player)
-            if _G.whitelistFriends and player:IsFriendsWith(game.Players.LocalPlayer.UserId) then
-                local playerName = player.Name
+        Players.PlayerAdded:Connect(function(plr)
+            if _G.whitelistFriends and plr:IsFriendsWith(Player.UserId) then
                 local alreadyWhitelisted = false
                 for _, name in ipairs(_G.whitelistedPlayers) do
-                    if name:lower() == playerName:lower() then
-                        alreadyWhitelisted = true
-                        break
-                    end
+                    if name:lower() == plr.Name:lower() then alreadyWhitelisted = true break end
                 end
-                if not alreadyWhitelisted then
-                    table.insert(_G.whitelistedPlayers, playerName)
-                end
+                if not alreadyWhitelisted then table.insert(_G.whitelistedPlayers, plr.Name) end
             end
         end)
     end
 end)
-switch:Set(false)
-local blacklistDropdown = KillingTab:AddDropdown("Add To Blacklist", function(selectedText)
+whitelistFriendsSwitch:Set(false)
+
+local blacklistDropdown = killingTab:AddDropdown("Add To Killist", function(selectedText)
     local playerName = selectedText:match("| (.+)$")
     if playerName then
         playerName = playerName:gsub("^%s*(.-)%s*$", "%1")
@@ -717,135 +573,133 @@ local blacklistDropdown = KillingTab:AddDropdown("Add To Blacklist", function(se
         table.insert(_G.blacklistedPlayers, playerName)
     end
 end)
-for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
-    if player ~= game.Players.LocalPlayer then
-        local displayText = getPlayerDisplayText(player)
+
+for _, plr in ipairs(Players:GetPlayers()) do
+    if plr ~= Player then
+        local displayText = getPlayerDisplayText(plr)
         whitelistDropdown:Add(displayText)
         blacklistDropdown:Add(displayText)
     end
 end
-game:GetService("Players").PlayerAdded:Connect(function(player)
-    if player ~= game.Players.LocalPlayer then
-        local displayText = getPlayerDisplayText(player)
+
+Players.PlayerAdded:Connect(function(plr)
+    if plr ~= Player then
+        local displayText = getPlayerDisplayText(plr)
         whitelistDropdown:Add(displayText)
         blacklistDropdown:Add(displayText)
     end
 end)
-local blacklistKillSwitch = KillingTab:AddSwitch("Kill List", function(bool)
+
+local blacklistKillSwitch = killingTab:AddSwitch("Kill List", function(bool)
     _G.killBlacklistedOnly = bool
     if bool then
         if not _G.blacklistKillConnection then
-            _G.blacklistKillConnection = game:GetService("RunService").Heartbeat:Connect(function()
+            _G.blacklistKillConnection = RunService.Heartbeat:Connect(function()
                 if _G.killBlacklistedOnly then
-                    for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
-                        if player ~= game.Players.LocalPlayer and isBlacklisted(player) then
-                            killPlayer(player)
+                    for _, plr in ipairs(Players:GetPlayers()) do
+                        if plr ~= Player and isBlacklisted(plr) then
+                            killPlayer(plr)
                         end
                     end
                 end
             end)
         end
     else
-        if _G.blacklistKillConnection then
-            _G.blacklistKillConnection:Disconnect()
-            _G.blacklistKillConnection = nil
-        end
+        if _G.blacklistKillConnection then _G.blacklistKillConnection:Disconnect() _G.blacklistKillConnection = nil end
     end
 end)
+
 local selectedPlayerToSpectate = nil
 local spectating = false
 local currentTargetConnection = nil
 local camera = workspace.CurrentCamera
-local function updateSpectateTarget(player)
-    if currentTargetConnection then
-        currentTargetConnection:Disconnect()
-    end
-    if player and player.Character then
-        local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+
+local function updateSpectateTarget(plr)
+    if currentTargetConnection then currentTargetConnection:Disconnect() end
+    if plr and plr.Character then
+        local humanoid = plr.Character:FindFirstChildOfClass("Humanoid")
         if humanoid then
             camera.CameraSubject = humanoid
-            currentTargetConnection = player.CharacterAdded:Connect(function(newChar)
+            currentTargetConnection = plr.CharacterAdded:Connect(function(newChar)
                 task.wait(0.2)
                 local newHumanoid = newChar:FindFirstChildOfClass("Humanoid")
-                if newHumanoid then
-                    camera.CameraSubject = newHumanoid
-                end
+                if newHumanoid then camera.CameraSubject = newHumanoid end
             end)
         end
     end
 end
-local function updatePlayerList()
-    return game.Players:GetPlayers()
-end
-local specdropdown = KillingTab:AddDropdown("Select Player To Spectate", function(text)
-    for _, player in ipairs(updatePlayerList()) do
-        local optionText = player.DisplayName .. " | " .. player.Name
+
+local specdropdown = killingTab:AddDropdown("Choose Player", function(text)
+    for _, plr in ipairs(Players:GetPlayers()) do
+        local optionText = plr.DisplayName .. " | " .. plr.Name
         if text == optionText then
-            selectedPlayerToSpectate = player
-            if spectating then
-                updateSpectateTarget(player)
-            end
+            selectedPlayerToSpectate = plr
+            if spectating then updateSpectateTarget(plr) end
             break
         end
     end
 end)
-local spectateSwitch = KillingTab:AddSwitch("Spectate", function(bool)
+
+local spectateSwitch = killingTab:AddSwitch("Spectate", function(bool)
     spectating = bool
     if spectating and selectedPlayerToSpectate then
         updateSpectateTarget(selectedPlayerToSpectate)
     else
-        if currentTargetConnection then
-            currentTargetConnection:Disconnect()
-            currentTargetConnection = nil
-        end
-        local localPlayer = game.Players.LocalPlayer
-        if localPlayer.Character then
-            local humanoid = localPlayer.Character:FindFirstChildOfClass("Humanoid")
-            if humanoid then
-                camera.CameraSubject = humanoid
-            end
+        if currentTargetConnection then currentTargetConnection:Disconnect() currentTargetConnection = nil end
+        if Player.Character then
+            local humanoid = Player.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid then camera.CameraSubject = humanoid end
         end
     end
 end)
-for _, player in ipairs(updatePlayerList()) do
-    specdropdown:Add(player.DisplayName .. " | " .. player.Name)
+
+for _, plr in ipairs(Players:GetPlayers()) do
+    specdropdown:Add(plr.DisplayName .. " | " .. plr.Name)
 end
-game.Players.PlayerAdded:Connect(function(player)
-    specdropdown:Add(player.DisplayName .. " | " .. player.Name)
+
+Players.PlayerAdded:Connect(function(plr)
+    specdropdown:Add(plr.DisplayName .. " | " .. plr.Name)
 end)
-game.Players.PlayerRemoving:Connect(function(player)
-    if selectedPlayerToSpectate and selectedPlayerToSpectate == player then
+
+Players.PlayerRemoving:Connect(function(plr)
+    if selectedPlayerToSpectate and selectedPlayerToSpectate == plr then
         selectedPlayerToSpectate = nil
-        if spectating then
-            spectateSwitch:Set(false)
-        end
+        if spectating then spectateSwitch:Set(false) end
     end
 end)
-local whitelistLabel = KillingTab:AddLabel("Whitelist: None")
-whitelistLabel.TextSize = 20
-KillingTab:AddButton("Clear Whitelist", function()
+
+local whitelistLabel = killingTab:AddLabel("Whitelist: None")
+whitelistLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+whitelistLabel.TextSize = 17
+
+killingTab:AddButton("Clear Whitelist", function()
     _G.whitelistedPlayers = {}
 end)
-local blacklistLabel = KillingTab:AddLabel("Blacklist: None")
-blacklistLabel.TextSize = 20
-KillingTab:AddButton("Clear Blacklist", function()
+
+local blacklistLabel = killingTab:AddLabel("Killist: None")
+blacklistLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+blacklistLabel.TextSize = 17
+
+killingTab:AddButton("Clear Blacklist", function()
     _G.blacklistedPlayers = {}
 end)
+
 local function updateWhitelistLabel()
     if #_G.whitelistedPlayers == 0 then
         whitelistLabel.Text = "Whitelist: None"
     else
         whitelistLabel.Text = "Whitelist: " .. table.concat(_G.whitelistedPlayers, ", ")
     end
-
 end
+
 local function updateBlacklistLabel()
     if #_G.blacklistedPlayers == 0 then
-        blacklistLabel.Text = "Blacklist: None"
+        blacklistLabel.Text = "Killlist: None"
     else
-        blacklistLabel.Text = "Blacklist: " .. table.concat(_G.blacklistedPlayers, ", ")
+        blacklistLabel.Text = "Killlist: " .. table.concat(_G.blacklistedPlayers, ", ")
     end
 end
+
 task.spawn(function()
     while true do
         updateWhitelistLabel()
@@ -853,264 +707,55 @@ task.spawn(function()
         task.wait(0.2)
     end
 end)
-local size2CounterBlacklist = {}
-local cState = {
-    active = false,
-    isNaN = false,
-    deaths = {},
-    killsGained = 0,
-    lastKills = 0,
-    needed = 1,
-    lastChar = nil,
-    lastHealth = 100,
-    conns = {},
-}
-local function getLeaderstatsKills()
-    local s, v = pcall(function()
-        local ls = Player:FindFirstChild("leaderstats")
-        if not ls then return 0 end
-        local k = ls:FindFirstChild("Kills")
-        if k and k:IsA("ValueBase") then return k.Value end
-        return 0
-    end)
-    return s and v or 0
-end
-local function setPlayerSize(size)
-    pcall(function()
-        ReplicatedStorage:WaitForChild("rEvents"):WaitForChild("changeSpeedSizeRemote"):InvokeServer("changeSize", size)
-    end)
-end
-local function equipCounterEgg()
-    if not cState.isNaN then return end
-    local c = Player.Character
-    if not c then return end
-    local n = 0
-    for _, v in ipairs(c:GetChildren()) do
-        if v.Name == "Protein Egg" then
-            n += 1
-            if n > 1 then v.Parent = Player.Backpack end
-        end
+local godmodeTab = window:AddTab("GodMode")
+
+local waterLockCFrame = CFrame.new(227.88, -103.76, -788.79)
+local waterLockActive = false
+local waterLockThread = nil
+local waterLockCharConn = nil
+
+local function startWaterLock()
+    waterLockActive = true
+    local char = Player.Character
+    if char then
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if hrp then hrp.CFrame = waterLockCFrame end
     end
-    if n == 0 then
-        local e = Player.Backpack:FindFirstChild("Protein Egg")
-        if e then e.Parent = c end
-    end
-end
-local function unequipCounterEgg()
-    local c = Player.Character
-    if not c then return end
-    for _, v in ipairs(c:GetChildren()) do
-        if v.Name == "Protein Egg" then v.Parent = Player.Backpack end
-    end
-end
-local function resetCounterToSize2()
-    cState.isNaN = false
-    cState.killsGained = 0
-    cState.deaths = {}
-    cState.lastKills = getLeaderstatsKills()
-    setPlayerSize(2)
-    unequipCounterEgg()
-end
-local function registerCounterDeath()
-    if not cState.active then return end
-    if cState.isNaN then return end
-    local now = tick()
-    table.insert(cState.deaths, now)
-    for i = #cState.deaths, 1, -1 do
-        if now - cState.deaths[i] > 5 then
-            table.remove(cState.deaths, i)
-        end
-    end
-    if #cState.deaths >= 2 then
-        cState.isNaN = true
-        cState.killsGained = 0
-        cState.lastKills = getLeaderstatsKills()
-        setPlayerSize(0/0)
-    end
-end
-local function counterHeartbeat()
-    if not cState.active then return end
-    local currentChar = Player.Character
-    if currentChar ~= cState.lastChar then
-        if cState.lastChar ~= nil and currentChar ~= nil then
-            registerCounterDeath()
-        end
-        cState.lastChar = currentChar
-        cState.lastHealth = 100
-    end
-    if currentChar then
-        local hum = currentChar:FindFirstChildOfClass("Humanoid")
-        if hum then
-            if hum.Health <= 0 and cState.lastHealth > 0 then
-                registerCounterDeath()
+    waterLockThread = task.spawn(function()
+        while waterLockActive do
+            local character = Player.Character
+            if character then
+                local hrp = character:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    hrp.CFrame = waterLockCFrame
+                    hrp.Velocity = Vector3.zero
+                    hrp.RotVelocity = Vector3.zero
+                end
             end
-            cState.lastHealth = hum.Health
-        end
-    end
-    if cState.isNaN then
-        local k = getLeaderstatsKills()
-        if k > cState.lastKills then
-            cState.lastKills = k
-            cState.killsGained += 1
-            if cState.killsGained >= cState.needed then
-                resetCounterToSize2()
-            end
-        end
-        equipCounterEgg()
-    end
-end
-local counterBlacklistDropdown = GodmodeTab:AddDropdown("Add To Dynamic Blacklist", function(selectedText)
-    local playerName = selectedText:match("| (.+)$")
-    if playerName then
-        playerName = playerName:gsub("^%s*(.-)%s*$", "%1")
-        for _, name in ipairs(size2CounterBlacklist) do
-            if name:lower() == playerName:lower() then return end
-        end
-        table.insert(size2CounterBlacklist, playerName)
-    end
-end)
-for _, plr in ipairs(Players:GetPlayers()) do
-    if plr ~= Player then
-        counterBlacklistDropdown:Add(plr.DisplayName .. " | " .. plr.Name)
-    end
-end
-Players.PlayerAdded:Connect(function(plr)
-    if plr ~= Player then
-        counterBlacklistDropdown:Add(plr.DisplayName .. " | " .. plr.Name)
-    end
-end)
-local size2CounterSwitch = GodmodeTab:AddSwitch("Dynamic Kill", function(bool)
-    if bool then
-        cState.active = true
-        cState.isNaN = false
-        cState.deaths = {}
-        cState.killsGained = 0
-        cState.lastKills = getLeaderstatsKills()
-        cState.lastChar = Player.Character
-        cState.lastHealth = 100
-        cState.needed = math.max(1, #size2CounterBlacklist * 2)
-        setPlayerSize(2)
-        unequipCounterEgg()
-        table.insert(cState.conns, RunService.Heartbeat:Connect(counterHeartbeat))
-    else
-        cState.active = false
-        for _, conn in ipairs(cState.conns) do
-            pcall(function() conn:Disconnect() end)
-        end
-        cState.conns = {}
-        setPlayerSize(2)
-        unequipCounterEgg()
-    end
-end)
-local counterBlacklistLabel = GodmodeTab:AddLabel("Dynamic Blacklist: None")
-counterBlacklistLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-counterBlacklistLabel.TextSize = 17
-GodmodeTab:AddButton("Clear Dynamic Blacklist", function()
-    size2CounterBlacklist = {}
-end)
-task.spawn(function()
-    while true do
-        if #size2CounterBlacklist == 0 then
-            counterBlacklistLabel.Text = "Dynamic Blacklist: None"
-        else
-            counterBlacklistLabel.Text = "Dynamic Blacklist: " .. table.concat(size2CounterBlacklist, ", ")
-        end
-        task.wait(0.2)
-    end
-end)
-size2CounterSwitch:Set(false)
-local cachedREvents = ReplicatedStorage:WaitForChild("rEvents", 5)
-local cachedEquipPetEvent = cachedREvents and cachedREvents:WaitForChild("equipPetEvent", 5)
-local size2NaNActive = false
-local size2NaNThread = nil
-local selectedSize2NaNTarget = nil
-local function firePetEvent(action, pet)
-    if not cachedEquipPetEvent then return end
-    pcall(function()
-        cachedEquipPetEvent:FireServer(action, pet)
-    end)
-end
-local function unequipAllPets()
-    local petsFolder = Player:FindFirstChild("petsFolder")
-    if not petsFolder then return end
-    for _, folder in pairs(petsFolder:GetChildren()) do
-        if folder:IsA("Folder") then
-            for _, pet in pairs(folder:GetChildren()) do
-                if not size2NaNActive then break end
-                firePetEvent("unequipPet", pet)
-            end
-        end
-    end
-end
-local function equipPetsByName(name, maxCount)
-    local petsFolder = Player:FindFirstChild("petsFolder")
-    local uniqueFolder = petsFolder and petsFolder:FindFirstChild("Unique")
-    if not uniqueFolder then return end
-    local pets = {}
-    for _, pet in ipairs(uniqueFolder:GetChildren()) do
-        if pet.Name == name then
-            table.insert(pets, pet)
-        end
-    end
-    for i = 1, math.min(maxCount or 8, #pets) do
-        if not size2NaNActive then break end
-        firePetEvent("equipPet", pets[i])
-    end
-end
-local function startSize2NaN()
-    if size2NaNActive then return end
-    size2NaNActive = true
-    size2NaNThread = task.spawn(function()
-        while size2NaNActive do
-            unequipAllPets()
-            task.wait(0.02)
-            equipPetsByName("Wild Wizard", 8)
-            task.wait(0.02)
-            unequipAllPets()
-            task.wait(0.02)
-            equipPetsByName("Mighty Monster", 8)
-            task.wait(0.04)
+            task.wait(0.03)
         end
     end)
+    waterLockCharConn = Player.CharacterAdded:Connect(function(newChar)
+        if not waterLockActive then return end
+        task.wait(0.05)
+        local hrp = newChar:WaitForChild("HumanoidRootPart", 2)
+        if hrp then hrp.CFrame = waterLockCFrame end
+    end)
 end
-local function stopSize2NaN()
-    size2NaNActive = false
-    if size2NaNThread then task.cancel(size2NaNThread) size2NaNThread = nil end
+
+local function stopWaterLock()
+    waterLockActive = false
+    if waterLockThread then task.cancel(waterLockThread) waterLockThread = nil end
+    if waterLockCharConn then waterLockCharConn:Disconnect() waterLockCharConn = nil end
 end
-local size2NaNDropdown = GodmodeTab:AddDropdown("Select Victim", function(text)
-    for _, plr in ipairs(Players:GetPlayers()) do
-        local optionText = plr.DisplayName .. " | " .. plr.Name
-        if text == optionText then
-            selectedSize2NaNTarget = plr
-            break
-        end
-    end
+
+local waterSwitch = godmodeTab:AddSwitch("Break GodMode", function(bool)
+    if bool then startWaterLock() else stopWaterLock() end
 end)
-for _, plr in ipairs(Players:GetPlayers()) do
-    if plr ~= Player then
-        size2NaNDropdown:Add(plr.DisplayName .. " | " .. plr.Name)
-    end
-end
-Players.PlayerAdded:Connect(function(plr)
-    if plr ~= Player then
-        size2NaNDropdown:Add(plr.DisplayName .. " | " .. plr.Name)
-    end
-end)
-Players.PlayerRemoving:Connect(function(plr)
-    if selectedSize2NaNTarget == plr then
-        selectedSize2NaNTarget = nil
-    end
-end)
-local size2NaNSwitch = GodmodeTab:AddSwitch("Pack Spam", function(bool)
-    if bool then
-        startSize2NaN()
-    else
-        stopSize2NaN()
-    end
-end)
-size2NaNSwitch:Set(false)
+
 local selectedGodModeTarget = nil
-local godModeTargetDropdown = GodmodeTab:AddDropdown("Select Target", function(text)
+
+local godModeTargetDropdown = godmodeTab:AddDropdown("Select Target", function(text)
     for _, plr in ipairs(Players:GetPlayers()) do
         local optionText = plr.DisplayName .. " | " .. plr.Name
         if text == optionText then
@@ -1119,16 +764,19 @@ local godModeTargetDropdown = GodmodeTab:AddDropdown("Select Target", function(t
         end
     end
 end)
+
 for _, plr in ipairs(Players:GetPlayers()) do
     if plr ~= Player then
         godModeTargetDropdown:Add(plr.DisplayName .. " | " .. plr.Name)
     end
 end
+
 Players.PlayerAdded:Connect(function(plr)
     if plr ~= Player then
         godModeTargetDropdown:Add(plr.DisplayName .. " | " .. plr.Name)
     end
 end)
+
 Players.PlayerRemoving:Connect(function(plr)
     if selectedGodModeTarget == plr then
         selectedGodModeTarget = nil
@@ -1140,8 +788,10 @@ Players.PlayerRemoving:Connect(function(plr)
         end
     end
 end)
+
 local godModeActive = false
 local godModeThreads = {}
+
 local function stopGodMode()
     godModeActive = false
     for _, thread in ipairs(godModeThreads) do
@@ -1149,6 +799,7 @@ local function stopGodMode()
     end
     godModeThreads = {}
 end
+
 local function startGodMode()
     godModeActive = true
     local slamThread = task.spawn(function()
@@ -1200,7 +851,8 @@ local function startGodMode()
     end)
     table.insert(godModeThreads, tpThread)
 end
-local godModeSwitch = GodmodeTab:AddSwitch("GodMode Kill", function(bool)
+
+local godModeSwitch = godmodeTab:AddSwitch("GodMode Kill", function(bool)
     if bool then
         startGodMode()
     else
@@ -1208,387 +860,233 @@ local godModeSwitch = GodmodeTab:AddSwitch("GodMode Kill", function(bool)
     end
 end)
 godModeSwitch:Set(false)
-local following = false
-local followTarget = nil
-local function followPlayer(targetPlayer)
-    local myChar = LocalPlayer.Character
-    local targetChar = targetPlayer.Character
 
-    if not (myChar and targetChar) then return end
-    local myHRP = myChar:FindFirstChild("HumanoidRootPart")
-    local targetHRP = targetChar:FindFirstChild("HumanoidRootPart")
-
-    if myHRP and targetHRP then
-        local followPos = targetHRP.Position - (targetHRP.CFrame.LookVector * 3)
-        myHRP.CFrame = CFrame.new(followPos, targetHRP.Position)
-    end
-end
-local followDropdown = GodmodeTab:AddDropdown("Teleport To Player", function(selectedDisplayName)
-    if selectedDisplayName and selectedDisplayName ~= "" then
-        local target = nil
-        for _, plr in ipairs(Players:GetPlayers()) do
-            if plr.DisplayName == selectedDisplayName then
-                target = plr
-                break
-            end
-        end
-        if target then
-            followTarget = target.Name
-            following = true
-            print("âœ… Started following:", target.Name)
-            followPlayer(target)
-        end
-    end
-end)
-for _, player in ipairs(Players:GetPlayers()) do
-    if player ~= LocalPlayer then
-        followDropdown:Add(player.DisplayName)
-    end
-end
-Players.PlayerAdded:Connect(function(player)
-    if player ~= LocalPlayer then
-        followDropdown:Add(player.DisplayName)
-    end
-end)
-Players.PlayerRemoving:Connect(function(player)
-    followDropdown:Clear()
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer then
-            followDropdown:Add(plr.DisplayName)
-        end
-    end
-    if followTarget == player.Name then
-        followTarget = nil
-        following = false
-    end
-end)
-local godDamageActive = false
-GodmodeTab:AddSwitch("Auto Ground Slam", function(state)
-    godDamageActive = state
-    if state then
-        task.spawn(function()
-            while godDamageActive do
-                local player = LocalPlayer
-                local groundSlam = player.Backpack:FindFirstChild("Ground Slam") or (player.Character and player.Character:FindFirstChild("Ground Slam"))
-
-                if groundSlam then
-                    if groundSlam.Parent == player.Backpack then
-                        groundSlam.Parent = player.Character
-                    end
-                    if groundSlam:FindFirstChild("attackTime") then
-                        groundSlam.attackTime.Value = 0
-                    end
-                    player.muscleEvent:FireServer("slam")
-                    groundSlam:Activate()
-                end
-
-                task.wait(0.1)
+local sizeSwitch = godmodeTab:AddSwitch("Set Size 30", function(bool)
+    running = bool
+    if running then
+        thread = coroutine.create(function()
+            while running do
+                game:GetService("ReplicatedStorage").rEvents.changeSpeedSizeRemote:InvokeServer("changeSize", 30)
+                wait(0.01)
             end
         end)
+        coroutine.resume(thread)
     end
 end)
-GodmodeTab:AddButton("Stop Following", function()
-    following = false
-    followTarget = nil
-    print("â›” Stopped following")
-end)
-task.spawn(function()
-    while task.wait(0.01) do
-        if following and followTarget then
-            local target = Players:FindFirstChild(followTarget)
-            if target then
-                followPlayer(target)
-            else
-                following = false
-                followTarget = nil
+
+local size2CounterBlacklist = {}
+local cState = {
+    active = false,
+    isNaN = false,
+    deaths = {},
+    killsGained = 0,
+    lastKills = 0,
+    needed = 1,
+    lastChar = nil,
+    lastHealth = 100,
+    conns = {},
+}
+
+local function getLeaderstatsKills()
+    local s, v = pcall(function()
+        local ls = Player:FindFirstChild("leaderstats")
+        if not ls then return 0 end
+        local k = ls:FindFirstChild("Kills")
+        if k and k:IsA("ValueBase") then return k.Value end
+        return 0
+    end)
+    return s and v or 0
+end
+
+local function setPlayerSize(size)
+    pcall(function()
+        ReplicatedStorage:WaitForChild("rEvents"):WaitForChild("changeSpeedSizeRemote"):InvokeServer("changeSize", size)
+    end)
+end
+
+local function equipCounterEgg()
+    if not cState.isNaN then return end
+    local c = Player.Character
+    if not c then return end
+    local n = 0
+    for _, v in ipairs(c:GetChildren()) do
+        if v.Name == "Protein Egg" then
+            n += 1
+            if n > 1 then v.Parent = Player.Backpack end
+        end
+    end
+    if n == 0 then
+        local e = Player.Backpack:FindFirstChild("Protein Egg")
+        if e then e.Parent = c end
+    end
+end
+
+local function unequipCounterEgg()
+    local c = Player.Character
+    if not c then return end
+    for _, v in ipairs(c:GetChildren()) do
+        if v.Name == "Protein Egg" then v.Parent = Player.Backpack end
+    end
+end
+
+local function resetCounterToSize2()
+    cState.isNaN = false
+    cState.killsGained = 0
+    cState.deaths = {}
+    cState.lastKills = getLeaderstatsKills()
+    setPlayerSize(2)
+    unequipCounterEgg()
+end
+
+local function registerCounterDeath()
+    if not cState.active then return end
+    if cState.isNaN then return end
+    local now = tick()
+    table.insert(cState.deaths, now)
+    for i = #cState.deaths, 1, -1 do
+        if now - cState.deaths[i] > 5 then
+            table.remove(cState.deaths, i)
+        end
+    end
+    if #cState.deaths >= 2 then
+        cState.isNaN = true
+        cState.killsGained = 0
+        cState.lastKills = getLeaderstatsKills()
+        setPlayerSize(0/0)
+    end
+end
+local function counterHeartbeat()
+    if not cState.active then return end
+    local currentChar = Player.Character
+    if currentChar ~= cState.lastChar then
+        if cState.lastChar ~= nil and currentChar ~= nil then
+            registerCounterDeath()
+        end
+        cState.lastChar = currentChar
+        cState.lastHealth = 100
+    end
+    if currentChar then
+        local hum = currentChar:FindFirstChildOfClass("Humanoid")
+        if hum then
+            if hum.Health <= 0 and cState.lastHealth > 0 then
+                registerCounterDeath()
+            end
+            cState.lastHealth = hum.Health
+        end
+    end
+    if cState.isNaN then
+        local k = getLeaderstatsKills()
+        if k > cState.lastKills then
+            cState.lastKills = k
+            cState.killsGained += 1
+            if cState.killsGained >= cState.needed then
+                resetCounterToSize2()
             end
         end
+        equipCounterEgg()
     end
-end)
-LocalPlayer.CharacterAdded:Connect(function()
-    task.wait(1)
-    if following and followTarget then
-        local target = Players:FindFirstChild(followTarget)
-        if target then
-            followPlayer(target)
+end
+
+local counterBlacklistDropdown = godmodeTab:AddDropdown("Add To Dynamic Blacklist", function(selectedText)
+    local playerName = selectedText:match("| (.+)$")
+    if playerName then
+        playerName = playerName:gsub("^%s*(.-)%s*$", "%1")
+        for _, name in ipairs(size2CounterBlacklist) do
+            if name:lower() == playerName:lower() then return end
         end
+        table.insert(size2CounterBlacklist, playerName)
     end
 end)
-local emojiMap = {
-    ["Time"] = utf8.char(0x1F55B),
-    ["Stats"] = utf8.char(0x1F4CA),
-    ["Strength"] = utf8.char(0x1F4AA),
-    ["Rebirths"] = utf8.char(0x1F504),
-    ["Durability"] = utf8.char(0x1F6E1),
-    ["Kills"] = utf8.char(0x1F480),
-    ["Agility"] = utf8.char(0x1F3C3),
-    ["Evil Karma"] = utf8.char(0x1F608),
-    ["Good Karma"] = utf8.char(0x1F607),
-    ["Brawls"] = utf8.char(0x1F94A)
-}
-local statDefinitions = {
-    { name = "Strength", statName = "Strength" },
-    { name = "Rebirths", statName = "Rebirths" },
-    { name = "Durability", statName = "Durability" },
-    { name = "Agility", statName = "Agility" },
-    { name = "Kills", statName = "Kills" },
-    { name = "Evil Karma", statName = "evilKarma" },
-    { name = "Good Karma", statName = "goodKarma" },
-    { name = "Brawls", statName = "Brawls" }
-}
-local function getCurrentPlayers()
-    local playersList = {}
-    for _, p in ipairs(Players:GetPlayers()) do
-        table.insert(playersList, p)
+
+for _, plr in ipairs(Players:GetPlayers()) do
+    if plr ~= Player then
+        counterBlacklistDropdown:Add(plr.DisplayName .. " | " .. plr.Name)
     end
-    return playersList
 end
-local specdropdown = SpecsTab:AddDropdown("Choose Player", function(text) 
-    for _, player in ipairs(getCurrentPlayers()) do
-        local optionText = player.DisplayName .. " | " .. player.Name
-        if text == optionText then
-            playerToInspect = player
-            updateStatLabels(playerToInspect)
-            break
-        end
+
+Players.PlayerAdded:Connect(function(plr)
+    if plr ~= Player then
+        counterBlacklistDropdown:Add(plr.DisplayName .. " | " .. plr.Name)
     end
 end)
-for _, player in ipairs(getCurrentPlayers()) do
-    specdropdown:Add(player.DisplayName .. " | " .. player.Name)
-end
-Players.PlayerAdded:Connect(function(player)
-    specdropdown:Add(player.DisplayName .. " | " .. player.Name)
-end)
-Players.PlayerRemoving:Connect(function(player)
-    specdropdown:Clear()
-    for _, p in ipairs(getCurrentPlayers()) do
-        specdropdown:Add(p.DisplayName .. " | " .. p.Name)
-    end
-end)
-local playerNameLabel = SpecsTab:AddLabel("Name: N/A")
-playerNameLabel.TextSize = 20
-local playerUsernameLabel = SpecsTab:AddLabel("Username: N/A")
-playerUsernameLabel.TextSize = 20
-local statLabels = {}
-for _, info in ipairs(statDefinitions) do
-    statLabels[info.name] = SpecsTab:AddLabel(emojiMap[info.name] .. " " .. info.name .. ": 0 (0)")
-    statLabels[info.name].TextSize = 20
-end
-local function formatNumber(n)
-    if n >= 1e15 then
-        return string.format("%.1fqa", n/1e15)
-    elseif n >= 1e12 then
-        return string.format("%.1ft", n/1e12)
-    elseif n >= 1e9 then
-        return string.format("%.1fb", n/1e9)
-    elseif n >= 1e6 then
-        return string.format("%.1fm", n/1e6)
-    elseif n >= 1e3 then
-        return string.format("%.1fk", n/1e3)
+
+local size2CounterSwitch = godmodeTab:AddSwitch("Dynamic Kill", function(bool)
+    if bool then
+        cState.active = true
+        cState.isNaN = false
+        cState.deaths = {}
+        cState.killsGained = 0
+        cState.lastKills = getLeaderstatsKills()
+        cState.lastChar = Player.Character
+        cState.lastHealth = 100
+        cState.needed = math.max(1, #size2CounterBlacklist * 2)
+        setPlayerSize(2)
+        unequipCounterEgg()
+        table.insert(cState.conns, RunService.Heartbeat:Connect(counterHeartbeat))
     else
-        return tostring(n)
-    end
-end
-local function formatWithCommas(n)
-    local formatted = tostring(math.floor(n))
-    while true do
-        formatted, k = formatted:gsub("^(-?%d+)(%d%d%d)", '%1,%2')
-        if k == 0 then break end
-    end
-    return formatted
-end
-local function updateStatLabels(targetPlayer)
-    if not targetPlayer then return end
-
-    playerNameLabel.Text = "Name: " .. targetPlayer.DisplayName
-    playerUsernameLabel.Text = "Username: " .. targetPlayer.Name
-
-    local leaderstats = targetPlayer:FindFirstChild("leaderstats")
-    if not leaderstats then return end
-
-    for _, info in ipairs(statDefinitions) do
-        local statObject
-
-        if leaderstats:FindFirstChild(info.statName) then
-            statObject = leaderstats:FindFirstChild(info.statName)
-        elseif targetPlayer:FindFirstChild(info.statName) then
-            statObject = targetPlayer:FindFirstChild(info.statName)
+        cState.active = false
+        for _, conn in ipairs(cState.conns) do
+            pcall(function() conn:Disconnect() end)
         end
-
-        if statObject then
-            local value = statObject.Value
-            local emoji = emojiMap[info.name] or ""
-            statLabels[info.name].Text = string.format(
-                "%s %s: %s (%s)",
-                emoji,
-                info.name,
-                formatNumber(value),
-                formatWithCommas(value)
-            )
-        else
-            statLabels[info.name].Text = emojiMap[info.name] .. " " .. info.name .. ": 0 (0)"
-        end
+        cState.conns = {}
+        setPlayerSize(2)
+        unequipCounterEgg()
     end
-end
+end)
+size2CounterSwitch:Set(false)
+
+local counterBlacklistLabel = godmodeTab:AddLabel("Dynamic Blacklist: None")
+counterBlacklistLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+counterBlacklistLabel.TextSize = 17
+
+godmodeTab:AddButton("Clear Dynamic Blacklist", function()
+    size2CounterBlacklist = {}
+end)
+
 task.spawn(function()
     while true do
-        if playerToInspect then
-            updateStatLabels(playerToInspect)
+        if #size2CounterBlacklist == 0 then
+            counterBlacklistLabel.Text = "Dynamic Blacklist: None"
+        else
+            counterBlacklistLabel.Text = "Dynamic Blacklist: " .. table.concat(size2CounterBlacklist, ", ")
         end
         task.wait(0.2)
     end
 end)
-local enemyHealthLabel = SpecsTab:AddLabel("Enemy Health: N/A")
-enemyHealthLabel.TextSize = 20
-enemyHealthLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-local playerDamageLabel = SpecsTab:AddLabel("Your Damage: N/A")
-playerDamageLabel.TextSize = 20
-playerDamageLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-local hitsToKillLabel = SpecsTab:AddLabel("Hits to Kill: N/A")
-hitsToKillLabel.TextSize = 20
-hitsToKillLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-local function calculateEnemyHealth(targetPlayer)
-    if not targetPlayer then return 0 end
-    local baseDura = 0
-    local durabilityStat = targetPlayer:FindFirstChild("Durability") 
-        or (targetPlayer:FindFirstChild("leaderstats") and targetPlayer.leaderstats:FindFirstChild("Durability"))
-    if durabilityStat then
-        baseDura = durabilityStat.Value
-    end
-    local totalMultiplier = 1
-    local ultFolder = targetPlayer:FindFirstChild("ultimatesFolder")
-    if ultFolder then
-        local infernalHealth = ultFolder:FindFirstChild("Infernal Health")
-        if infernalHealth then
-            local upgrades = infernalHealth.Value or 0
-            totalMultiplier = totalMultiplier + 0.15 * upgrades
-        end
-    end
-    local equippedPetsFolder = targetPlayer:FindFirstChild("equippedPets")
-    if equippedPetsFolder then
-        local petBonus = 0
-        for _, petValue in ipairs(equippedPetsFolder:GetChildren()) do
-            if petValue:IsA("ObjectValue") and petValue.Value then
-                local petNameLower = string.lower(petValue.Value.Name)
-                if petNameLower:match("mighty") and petNameLower:match("monster") then
-                    petBonus = petBonus + 0.5
-                end
-            end
-        end
-        totalMultiplier = totalMultiplier + petBonus
-    end
 
-    local totalHealth = baseDura * totalMultiplier
-    return totalHealth
+local equipEvent = ReplicatedStorage.rEvents.equipPetEvent
+local cache = { WildWizard = {}, MightyMonster = {} }
+local active = false
+
+local function cachePets()
+    cache.WildWizard = {} cache.MightyMonster = {}
+    local unique = player:FindFirstChild("petsFolder") and player.petsFolder:FindFirstChild("Unique")
+    if not unique then return end
+    for _, p in pairs(unique:GetChildren()) do
+        if p.Name == "Wild Wizard" then table.insert(cache.WildWizard, p)
+        elseif p.Name == "Mighty Monster" then table.insert(cache.MightyMonster, p) end
+    end
 end
-local function calculateLocalPlayerDamage()
-    local strengthStat = nil
-    local leaderstats = Player:FindFirstChild("leaderstats")
-    if leaderstats then
-        strengthStat = leaderstats:FindFirstChild("Strength")
-    end
-    if not strengthStat then return 0 end
 
-    local baseDamage = strengthStat.Value * 0.0667
-    local totalMultiplier = 1
-
-    local ultFolder = Player:FindFirstChild("ultimatesFolder")
-    if ultFolder then
-        local demonDamage = ultFolder:FindFirstChild("Demon Damage")
-        if demonDamage then
-            local upgrades = demonDamage.Value or 0
-            totalMultiplier = totalMultiplier + 0.1 * upgrades
-        end
-    end
-    local equippedPetsFolder = Player:FindFirstChild("equippedPets")
-    if equippedPetsFolder then
-        local petBonus = 0
-        for _, petValue in ipairs(equippedPetsFolder:GetChildren()) do
-            if petValue:IsA("ObjectValue") and petValue.Value then
-                local petNameLower = string.lower(petValue.Value.Name)
-                if petNameLower:match("wild") and petNameLower:match("wizard") then
-                    petBonus = petBonus + 0.5
-                end
-            end
-        end
-        totalMultiplier = totalMultiplier + petBonus
-    end
-    baseDamage = baseDamage * totalMultiplier
-    return baseDamage
+local function swap(unequipList, equipList)
+    for _, p in pairs(unequipList) do pcall(function() equipEvent:FireServer("unequipPet", p) end) end
+    for i = 1, math.min(8, #equipList) do pcall(function() equipEvent:FireServer("equipPet", equipList[i]) end) end
 end
-local function calculateHitsToKill(health, damage)
-    if damage <= 0 then return "∞" end
-    local hits = math.ceil(health / damage)
-    if hits > 100 then
-        return "∞"
-    elseif hits < 1 then
-        return 1
+
+godmodeTab:AddSwitch("Pack Spam", function(enabled)
+    active = enabled
+    if enabled then
+        cachePets()
+        task.spawn(function()
+            while active do
+                swap(cache.MightyMonster, cache.WildWizard)
+                task.wait(0.3)
+                swap(cache.WildWizard, cache.MightyMonster)
+                task.wait(0.3)
+            end
+        end)
     else
-        return hits
-    end
-end
-local function updateAdvancedStats(targetPlayer)
-    if not targetPlayer then
-        enemyHealthLabel.Text = "Enemy Health: N/A"
-        playerDamageLabel.Text = "Your Damage: N/A"
-        hitsToKillLabel.Text = "Hits to Kill: N/A"
-        return
-    end
-    local enemyHealth = calculateEnemyHealth(targetPlayer)
-    local playerDamage = calculateLocalPlayerDamage()
-    local hitsToKill = calculateHitsToKill(enemyHealth, playerDamage)
-    enemyHealthLabel.Text = string.format("Enemy Health: %s (%s)", formatNumber(enemyHealth), formatWithCommas(enemyHealth))
-    playerDamageLabel.Text = string.format("Your Damage: %s (%s)", formatNumber(playerDamage), formatWithCommas(playerDamage))
-    hitsToKillLabel.Text = string.format("Hits to Kill: %s", tostring(hitsToKill))
-end
-task.spawn(function()
-    while true do
-        if playerToInspect then
-            updateAdvancedStats(playerToInspect)
-        else
-            updateAdvancedStats(nil)
-        end
-        task.wait(0.1)
+        for _, p in pairs(cache.WildWizard) do pcall(function() equipEvent:FireServer("unequipPet", p) end) end
+        for _, p in pairs(cache.MightyMonster) do pcall(function() equipEvent:FireServer("unequipPet", p) end) end
     end
 end)
-local waterLockCFrame = CFrame.new(227.88, -103.76, -788.79)
-local waterLockActive = false
-local waterLockThread = nil
-local waterLockCharConn = nil
-local function startWaterLock()
-    waterLockActive = true
-    local char = Player.Character
-    if char then
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        if hrp then hrp.CFrame = waterLockCFrame end
-    end
-    waterLockThread = task.spawn(function()
-        while waterLockActive do
-            local character = Player.Character
-            if character then
-                local hrp = character:FindFirstChild("HumanoidRootPart")
-                if hrp then
-                    hrp.CFrame = waterLockCFrame
-                    hrp.Velocity = Vector3.zero
-                    hrp.RotVelocity = Vector3.zero
-                end
-            end
-            task.wait(0.03)
-        end
-    end)
-    waterLockCharConn = Player.CharacterAdded:Connect(function(newChar)
-        if not waterLockActive then return end
-        task.wait(0.05)
-        local hrp = newChar:WaitForChild("HumanoidRootPart", 2)
-        if hrp then hrp.CFrame = waterLockCFrame end
-    end)
-end
-local function stopWaterLock()
-    waterLockActive = false
-    if waterLockThread then task.cancel(waterLockThread) waterLockThread = nil end
-    if waterLockCharConn then waterLockCharConn:Disconnect() waterLockCharConn = nil end
-end
-local waterSwitch = GodmodeTab:AddSwitch("Break GodMode", function(bool)
-    if bool then startWaterLock() else stopWaterLock() end
-end)
-waterSwitch:Set(false)
