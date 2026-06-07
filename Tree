@@ -8,6 +8,17 @@ local Services = {
     RunService = game:GetService("RunService")
 }
 
+local Players = game:GetService("Players")
+local players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local VirtualUser = game:GetService("VirtualUser")
+local RunService = game:GetService("RunService")
+local player = players.LocalPlayer
+local Player = Players.LocalPlayer
+local LocalPlayer = Players.LocalPlayer
+local displayName = player.DisplayName
+local muscleEvent = Player:WaitForChild("muscleEvent")
+
 local PlayerData = {
     Player = Services.Players.LocalPlayer,
     DisplayName = Services.Players.LocalPlayer.DisplayName,
@@ -1059,10 +1070,6 @@ task.spawn(function()
 	end
 end)
 
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local LocalPlayer = Players.LocalPlayer
-
 local fileName = "GenesisBlacklist_"..LocalPlayer.Name..".txt"
 local blacklistWords = {}
 local active = {}
@@ -1856,10 +1863,6 @@ task.spawn(function()
         task.wait(0.1)
     end
 end)
-
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local players = game:GetService("Players")
-local player = players.LocalPlayer
 
 local equipEvent = ReplicatedStorage.rEvents.equipPetEvent
 
