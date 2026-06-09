@@ -64,7 +64,7 @@ function Utils.greeting()
 	else return "Good Night " .. PlayerData.DisplayName end
 end
 
-local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/empresstreee/pvscripts/refs/heads/main/DESTROYERUI", true))()
+local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/360ihssp/pvscripts/refs/heads/main/DESTROYERUI", true))()
 
 local window = library:AddWindow("TreeXMuki | Private Killing - " .. Utils.greeting(), {
     main_color = Color3.fromRGB(96, 96, 96),
