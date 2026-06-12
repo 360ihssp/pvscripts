@@ -1903,6 +1903,83 @@ Tabs.GodMode:AddSwitch("Pack Spam", function(enabled)
 	end
 end)
 
+local remote = ReplicatedStorage:WaitForChild("rEvents"):WaitForChild("equipPetEvent")
+
+local petsFolder = LocalPlayer:WaitForChild("petsFolder")
+local uniqueFolder = petsFolder:WaitForChild("Unique")
+
+local mightyMonsters = {}
+
+local function rebuildMightyList()
+    table.clear(mightyMonsters)
+
+    for _, pet in ipairs(uniqueFolder:GetChildren()) do
+        if pet.Name == "Mighty Monster" then
+            mightyMonsters[#mightyMonsters + 1] = pet
+        end
+    end
+end
+
+rebuildMightyList()
+
+uniqueFolder.ChildAdded:Connect(function(child)
+    if child.Name == "Mighty Monster" then
+        mightyMonsters[#mightyMonsters + 1] = child
+    end
+end)
+
+uniqueFolder.ChildRemoved:Connect(function(child)
+    for i = #mightyMonsters, 1, -1 do
+        if mightyMonsters[i] == child then
+            mightyMonsters[i] = mightyMonsters[#mightyMonsters]
+            mightyMonsters[#mightyMonsters] = nil
+            break
+        end
+    end
+end)
+
+local function equipCycle()
+    local folders = petsFolder:GetChildren()
+    for i = 1, #folders do
+        local folder = folders[i]
+        if folder:IsA("Folder") then
+            local pets = folder:GetChildren()
+            for j = 1, #pets do
+                remote:FireServer("unequipPet", pets[j])
+            end
+        end
+    end
+    local limit = (#mightyMonsters < 8) and #mightyMonsters or 8
+    for i = 1, limit do
+        local pet = mightyMonsters[i]
+        if pet and pet.Parent then
+            remote:FireServer("equipPet", pet)
+        end
+    end
+end
+
+if Tabs.GodMode then
+    local running = false
+    Tabs.GodMode:AddButton("Start Ultra Fast Spam", function()
+        if running then return end
+        running = true
+        task.spawn(function()
+            while running do
+                equipCycle()
+                task.wait(0.1)
+            end
+        end)
+    end)
+    Tabs.GodMode:AddButton("Stop Spam", function()
+        running = false
+    end)
+    Tabs.GodMode:AddButton("Equip Once", function()
+        equipCycle()
+    end)
+else
+    warn("Tabs.GodMode is nil")
+end
+
 Tabs.GodMode:AddLabel("————————————————————————————————")
 
 local GodModeKillLabel = Tabs.GodMode:AddLabel("GodMode Kill:")
